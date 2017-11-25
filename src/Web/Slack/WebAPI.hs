@@ -94,14 +94,14 @@ getChannelHistory
     :: (MonadError T.Text m, MonadIO m)
     => SlackConfig
     -> ChannelId
-    -> m [ChatMessages]
+    -> m [ChatMessage]
 getChannelHistory = getHistory "channels.history"
 
 getGroupsHistory
     :: (MonadError T.Text m, MonadIO m)
     => SlackConfig
     -> ChannelId
-    -> m [ChatMessages]
+    -> m [ChatMessage]
 getGroupsHistory = getHistory "groups.history"
 
 getHistory
@@ -109,7 +109,7 @@ getHistory
     => String
     -> SlackConfig
     -> ChannelId
-    -> m [ChatMessages]
+    -> m [ChatMessage]
 getHistory method conf (Id cid) = do
     resp <- makeSlackCall conf method (W.param "channel" .~ [cid])
     msgs <- resp ^? key "messages" ?? "No messages in response"
