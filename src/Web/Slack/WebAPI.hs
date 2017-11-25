@@ -1,6 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Web.Slack.WebAPI
     ( SlackConfig(..)
@@ -10,6 +10,8 @@ module Web.Slack.WebAPI
     , rtm_start
     , chat_postMessage
     , reactions_add_message
+    , getChannelHistory
+    , getGroupsHistory
     ) where
 
 import Control.Lens hiding ((??))
@@ -88,6 +90,30 @@ reactions_add_message conf (Id cid) emoji timestamp = do
         (W.param "channel"   .~ [cid]) .
         (W.param "timestamp" .~ [encode' timestamp])
 
+getChannelHistory
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> ChannelId
+    -> m [ChatMessages]
+getChannelHistory = getHistory "channels.history"
+
+getGroupsHistory
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> ChannelId
+    -> m [ChatMessages]
+getGroupsHistory = getHistory "groups.history"
+
+getHistory
+    :: (MonadError T.Text m, MonadIO m)
+    => String
+    -> SlackConfig
+    -> ChannelId
+    -> m [ChatMessages]
+getHistory method conf (Id cid) = do
+    resp <- makeSlackCall conf method (W.param "channel" .~ [cid])
+    msgs <- resp ^? key "messages" ?? "No messages in response"
+    fromJSON' msgs
 -------------------------------------------------------------------------------
 -- Helpers
 
@@ -96,7 +122,7 @@ encode' = T.decodeUtf8 . BL.toStrict . encode
 
 fromJSON' :: (FromJSON a, MonadError T.Text m) => Value -> m a
 fromJSON' x = case fromJSON x of
-    Error e -> throwError (T.pack e)
+    Error e   -> throwError (T.pack e)
     Success r -> return r
 
 -- | Like '(??)' from Control.Error, but a bit more general and with the
@@ -104,4 +130,3 @@ fromJSON' x = case fromJSON x of
 infixl 7 ??
 (??) :: MonadError e m => Maybe a -> e -> m a
 x ?? e = maybe (throwError e) return x
-
