@@ -109,13 +109,21 @@ getHistory
     => String
     -> SlackConfig
     -> ChannelId
+    -> Maybe Int -- time of oldest message
     -> m [ChatMessage]
-getHistory method conf (Id cid) = do
-    resp <- makeSlackCall conf method (W.param "channel" .~ [cid])
+getHistory method conf (Id cid) time = do
+    let t = fromMaybe 0 time
+    resp <- makeSlackCall conf method $
+        (W.param "channel" .~ [cid]) .
+        (W.param "oldest" .~ [t])
     msgs <- resp ^? key "messages" ?? "No messages in response"
     fromJSON' msgs
 -------------------------------------------------------------------------------
 -- Helpers
+
+fromMaybe :: a -> Maybe a -> a
+fromMaybe a Nothing  = a
+fromMaybe _ (Just a) = a
 
 encode' :: ToJSON a => a -> T.Text
 encode' = T.decodeUtf8 . BL.toStrict . encode
