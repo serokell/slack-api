@@ -24,6 +24,8 @@ import qualified Data.Text.Encoding as T
 import qualified Network.Wreq as W
 import Web.Slack.Types
 
+import Data.Time.Clock.POSIX
+
 -- | Configuration options needed to connect to the Slack API
 data SlackConfig = SlackConfig
    { _slackApiToken :: String -- ^ API Token for Bot
@@ -94,6 +96,7 @@ getChannelHistory
     :: (MonadError T.Text m, MonadIO m)
     => SlackConfig
     -> ChannelId
+    -> Maybe POSIXTime
     -> m [ChatMessage]
 getChannelHistory = getHistory "channels.history"
 
@@ -101,6 +104,7 @@ getGroupsHistory
     :: (MonadError T.Text m, MonadIO m)
     => SlackConfig
     -> ChannelId
+    -> Maybe POSIXTime
     -> m [ChatMessage]
 getGroupsHistory = getHistory "groups.history"
 
@@ -109,13 +113,13 @@ getHistory
     => String
     -> SlackConfig
     -> ChannelId
-    -> Maybe Int -- time of oldest message
+    -> Maybe POSIXTime -- time of oldest message
     -> m [ChatMessage]
 getHistory method conf (Id cid) time = do
     let t = fromMaybe 0 time
     resp <- makeSlackCall conf method $
         (W.param "channel" .~ [cid]) .
-        (W.param "oldest" .~ [t])
+        (W.param "oldest" .~ [T.pack $ show t])
     msgs <- resp ^? key "messages" ?? "No messages in response"
     fromJSON' msgs
 -------------------------------------------------------------------------------
