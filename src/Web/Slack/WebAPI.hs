@@ -116,7 +116,8 @@ getHistory
     -> Maybe POSIXTime -- time of oldest message
     -> m [ChatMessage]
 getHistory method conf (Id cid) time = do
-    let t = fromMaybe 0 time
+    -- accidently 0 is not working as default argument
+    let t = fromMaybe 1 time
     resp <- makeSlackCall conf method $
         (W.param "channel" .~ [cid]) .
         (W.param "oldest" .~ [T.pack $ show t])
