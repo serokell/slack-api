@@ -120,7 +120,9 @@ getHistory method conf (Id cid) time = do
     let t = fromMaybe 1 time
     resp <- makeSlackCall conf method $
         (W.param "channel" .~ [cid]) .
-        (W.param "oldest" .~ [T.pack $ show t])
+        (W.param "oldest" .~ [T.pack $ show t]) .
+        -- 1000 is max count of history
+        (W.param "count" .~ [T.pack "1000"])
     msgs <- resp ^? key "messages" ?? "No messages in response"
     fromJSON' msgs
 -------------------------------------------------------------------------------
