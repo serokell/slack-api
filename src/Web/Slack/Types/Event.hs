@@ -1,26 +1,29 @@
-{-# LANGUAGE GADTs, LambdaCase, OverloadedStrings, ScopedTypeVariables,
- TemplateHaskell #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 module Web.Slack.Types.Event  where
 
-import Web.Slack.Types.Channel
-import Web.Slack.Types.Bot
 import Web.Slack.Types.Base
-import Web.Slack.Types.User
-import Web.Slack.Types.File
-import Web.Slack.Types.IM
-import Web.Slack.Types.Id
-import Web.Slack.Types.Item
+import Web.Slack.Types.Bot
+import Web.Slack.Types.Channel
 import Web.Slack.Types.Comment
 import Web.Slack.Types.Error
 import Web.Slack.Types.Event.Subtype
-import Web.Slack.Types.Time
+import Web.Slack.Types.File
+import Web.Slack.Types.Id
+import Web.Slack.Types.IM
+import Web.Slack.Types.Item
 import Web.Slack.Types.Presence
+import Web.Slack.Types.Time
+import Web.Slack.Types.User
 
 import Data.Aeson
 import Data.Aeson.Types
 
-import Control.Lens.TH
 import Control.Applicative
+import Control.Lens.TH
 import Control.Monad
 import Data.Text (Text)
 import Prelude
@@ -89,6 +92,8 @@ data Event where
   Pong :: Time -> Event
   ReconnectUrl :: URL -> Event
   TeamMigrationStarted :: Event
+  MemberJoinedChannel :: UserId -> ChannelId -> Event
+  MemberLeftChannel :: UserId -> ChannelId -> Event
   -- Unstable
   PinAdded :: Event
   PinRemoved :: Event
@@ -123,7 +128,7 @@ parseType o@(Object v) typ =
                   Just r  -> Just <$> subtype r o) =<< v .:? "subtype"
         submitter <- case subt of
                       Just (SBotMessage bid _ _) -> return $ BotComment bid
-                      _ -> maybe System UserComment <$> v .:? "user"
+                      _                          -> maybe System UserComment <$> v .:? "user"
         void $ (v .: "channel" :: Parser ChannelId)
         hidden <- (\case {Just True -> True; _ -> False}) <$> v .:? "hidden"
         if not hidden
@@ -187,6 +192,8 @@ parseType o@(Object v) typ =
       "team_migration_started" -> pure TeamMigrationStarted
       "pin_added" -> pure PinAdded
       "pin_removed" -> pure PinRemoved
+      "member_joined_channel" -> MemberJoinedChannel <$> v .: "user" <*> v .: "channel"
+      "member_left_channel" -> MemberLeftChannel <$> v .: "user" <*> v .: "channel"
       _ -> return $ UnknownEvent o
 parseType _ _ = error "Expecting object"
 
