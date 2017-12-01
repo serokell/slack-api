@@ -24,7 +24,7 @@ data MessagePayload = MessagePayload
 
 data ChatMessage = ChatMessage
     { _msgType   :: T.Text
-    , _msgUserId :: UserId
+    , _msgUserId :: Maybe UserId
     , _msgText   :: T.Text
     , _msgTs     :: SlackTimeStamp
     } deriving (Show)
@@ -32,7 +32,7 @@ data ChatMessage = ChatMessage
 instance FromJSON ChatMessage where
     parseJSON = withObject "ChatMessage" $ \o -> ChatMessage <$>
                             o .: "type" <*>
-                            o .: "user" <*>
+                            o .:? "user" <*>
                             o .: "text" <*>
                             o .: "ts"
 
