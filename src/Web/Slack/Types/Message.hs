@@ -7,6 +7,8 @@ module Web.Slack.Types.Message where
 import Control.Lens.TH
 import Data.Aeson
 import Data.Aeson.TH
+import Data.Aeson.Types
+import Data.Maybe
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX
 import GHC.Generics
@@ -35,6 +37,9 @@ instance FromJSON ChatMessage where
                             o .:? "user" <*>
                             o .: "text" <*>
                             o .: "ts"
+
+defaultToEmpty :: Object -> T.Text -> Parser T.Text
+defaultToEmpty o tag = fmap (fromMaybe $ T.pack "") $ o .:? tag
 
 makeLenses ''ChatMessage
 
