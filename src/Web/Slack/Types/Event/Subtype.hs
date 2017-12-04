@@ -1,19 +1,23 @@
-{-# LANGUAGE LambdaCase, GADTs, OverloadedStrings, TemplateHaskell, CPP #-}
+{-# LANGUAGE CPP               #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module Web.Slack.Types.Event.Subtype (Subtype(..), subtype) where
 
 import Data.Aeson
 import Data.Aeson.Types
-import Web.Slack.Types.Time
-import Web.Slack.Types.Id
-import Web.Slack.Types.File hiding (URL)
-import Web.Slack.Types.Comment
 import Web.Slack.Types.Bot
+import Web.Slack.Types.Comment
+import Web.Slack.Types.File hiding (URL)
+import Web.Slack.Types.Id
 import Web.Slack.Types.Item
+import Web.Slack.Types.Time
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
 #endif
-import Data.Text (Text)
 import Control.Lens.TH
+import Data.Text (Text)
 
 type Username = Text
 
@@ -44,6 +48,9 @@ data Subtype where
   -- for more detail and updates.
   SPinnedItem :: Subtype
   SUnpinnedItem :: Subtype
+  -- Mock subtype of event could be used to track replies
+  -- See https://api.slack.com/events/message/message_replied
+  SMessageReplied :: Subtype
   deriving Show
 
 makePrisms ''Subtype
@@ -51,29 +58,29 @@ makePrisms ''Subtype
 subtype :: String -> Value -> Parser Subtype
 subtype s = withObject "subtype" (\v ->
   case s of
-    "bot_message" -> SBotMessage <$> v .: "bot_id"  <*> v .:? "username" <*> v .:? "icons"
-    "me_message"  -> return SMeMessage
-    "message_changed" -> SMessageChanged <$> v .: "message"
-    "message_deleted" -> SMessageDeleted <$> v .: "deleted_ts"
-    "channel_join"  ->   SChannelJoin  <$> v .:? "inviter"
-    "channel_leave"   -> return SChannelLeave
-    "channel_topic"   -> SChannelTopic <$> v .: "topic"
-    "channel_purpose" -> SChannelPurpose <$> v .: "purpose"
-    "channel_name"    -> SChannelName <$> v .: "old_name" <*> v .: "name"
-    "channel_archive" -> SChannelArchive <$> v .: "members"
+    "bot_message"       -> SBotMessage <$> v .: "bot_id"  <*> v .:? "username" <*> v .:? "icons"
+    "me_message"        -> return SMeMessage
+    "message_changed"   -> SMessageChanged <$> v .: "message"
+    "message_deleted"   -> SMessageDeleted <$> v .: "deleted_ts"
+    "channel_join"      ->   SChannelJoin  <$> v .:? "inviter"
+    "channel_leave"     -> return SChannelLeave
+    "channel_topic"     -> SChannelTopic <$> v .: "topic"
+    "channel_purpose"   -> SChannelPurpose <$> v .: "purpose"
+    "channel_name"      -> SChannelName <$> v .: "old_name" <*> v .: "name"
+    "channel_archive"   -> SChannelArchive <$> v .: "members"
     "channel_unarchive" ->  return SChannelUnarchive
 
-    "group_join"    -> SGroupJoin  <$> v .:? "inviter"
-    "group_leave"   -> return SGroupLeave
-    "group_topic"   -> SGroupTopic <$> v .: "topic"
-    "group_purpose" -> SGroupPurpose <$> v .: "purpose"
-    "group_name"    -> SGroupName <$> v .: "old_name" <*> v .: "name"
-    "group_archive" -> SGroupArchive <$> v .: "members"
-    "group_unarchive" ->  return SGroupUnarchive
-    "file_share"    -> SFileShare <$> v .: "file" <*> v .: "upload"
-    "file_comment"  -> SFileComment <$> v .: "file" <*> v .: "comment"
-    "file_mention"  -> SFileMention <$> v .: "file"
-    "pinned_item"   -> pure SPinnedItem
-    "unpinned_item" -> pure SUnpinnedItem
-    _               -> fail $ "Unrecognised subtype: " ++ s)
-
+    "group_join"        -> SGroupJoin  <$> v .:? "inviter"
+    "group_leave"       -> return SGroupLeave
+    "group_topic"       -> SGroupTopic <$> v .: "topic"
+    "group_purpose"     -> SGroupPurpose <$> v .: "purpose"
+    "group_name"        -> SGroupName <$> v .: "old_name" <*> v .: "name"
+    "group_archive"     -> SGroupArchive <$> v .: "members"
+    "group_unarchive"   ->  return SGroupUnarchive
+    "file_share"        -> SFileShare <$> v .: "file" <*> v .: "upload"
+    "file_comment"      -> SFileComment <$> v .: "file" <*> v .: "comment"
+    "file_mention"      -> SFileMention <$> v .: "file"
+    "pinned_item"       -> pure SPinnedItem
+    "unpinned_item"     -> pure SUnpinnedItem
+    "message_replied"   -> pure SMessageReplied
+    _                   -> fail $ "Unrecognised subtype: " ++ s)
