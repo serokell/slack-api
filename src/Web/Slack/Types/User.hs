@@ -36,6 +36,7 @@ instance FromJSON User where
                                         <*> o .: "profile" <*> (parseJSON (Object o) :: Parser Permissions)
                                         <*> fmap (fromMaybe False) (o .:? "has_files")
                                         <*> ((return $ fromMaybe defaultTimezone (parseMaybe parseJSON (Object o))) :: Parser Timezone))
+instance ToJSON User
 
 defaultTimezone :: Timezone
 defaultTimezone = Timezone Nothing "Pacific Standard Time" (-28800)
@@ -51,8 +52,9 @@ data Timezone = Timezone
               { _timezoneDesc   :: Maybe Text
               , _timezoneLabel  :: Text
               , _timezoneOffset :: Int
-              } deriving Show
+              } deriving (Generic, Show)
 
+instance ToJSON Timezone
 instance FromJSON Timezone where
   parseJSON = withObject "timezone" (\o -> Timezone <$> o .:? "tz" <*> o .: "tz_label" <*> o .: "tz_offset")
 
@@ -63,7 +65,9 @@ data Permissions = Permissions
                  , _isRestricted      :: Bool
                  , _isUltraRestricted :: Bool
                  , _isBot             :: Bool
-                 } deriving (Show)
+                 } deriving (Generic, Show)
+
+instance ToJSON Permissions
 
 data Profile = Profile
              { _profileFirstName          :: Maybe Text
@@ -79,13 +83,14 @@ data Profile = Profile
              , _profileImage48            :: URL
              , _profileImage72            :: URL
              , _profileImage192           :: URL
-             } deriving (Show)
+             } deriving (Generic, Show)
 
 makeLenses ''Profile
 makeLenses ''Permissions
 makeLenses ''Timezone
 makeLenses ''User
 
+instance ToJSON Profile
 instance FromJSON Profile where
   parseJSON = withObject "Profile"
                 (\o -> let v = (o .:)
