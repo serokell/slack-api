@@ -1,15 +1,20 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
+
 module Web.Slack.Types.User where
 
+import GHC.Generics
+
 import Control.Applicative
+import Control.Lens.TH
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import Control.Lens.TH
 
-import Web.Slack.Types.Id
 import Web.Slack.Types.Base
+import Web.Slack.Types.Id
 
 import Prelude
 
@@ -23,7 +28,7 @@ data User = User
           , _userPermission :: Permissions
           , _userHasFiles   :: Bool
           , _userTimezone   :: Timezone
-          } deriving (Show)
+          } deriving (Generic, Show)
 
 instance FromJSON User where
   parseJSON = withObject "User" (\o -> User <$> o .: "id" <*> o .: "name" <*> o .: "deleted"
