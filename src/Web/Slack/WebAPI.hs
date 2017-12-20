@@ -12,6 +12,8 @@ module Web.Slack.WebAPI
     , reactions_add_message
     , getChannelHistory
     , getGroupsHistory
+    , getGroupedUsers
+    , getUsers
     ) where
 
 import Control.Lens hiding ((??))
@@ -125,6 +127,26 @@ getHistory method conf (Id cid) time = do
         (W.param "count" .~ [T.pack "1000"])
     msgs <- resp ^? key "messages" ?? "No messages in response"
     fromJSON' msgs
+
+getGroupedUsers
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> GroupId
+    -> m [UserId]
+getGroupedUsers conf (Id gid) = do
+    resp <- makeSlackCall conf "usergroups.users.list" $
+        (W.param "usergroup" .~ [gid])
+    users <- resp ^? key "users" ?? "No users in response"
+    fromJSON' users
+
+getUsers
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> m [User]
+getUsers conf = do
+    resp <- makeSlackCall conf "users.list" id
+    users <- resp ^? key "members" ?? "No members in response"
+    fromJSON' users
 -------------------------------------------------------------------------------
 -- Helpers
 
