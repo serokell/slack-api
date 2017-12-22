@@ -147,6 +147,17 @@ getUsers conf = do
     resp <- makeSlackCall conf "users.list" id
     users <- resp ^? key "members" ?? "No members in response"
     fromJSON' users
+
+getUser
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> UserId -- SlackId
+    -> User
+getUser conf (Id uid) = do
+    resp makeSlackCall conf "users.info" $
+        (W.params "user" .~ [uid])
+    user <- resp ^? key "user" ?? "No user in response"
+    fromJSON' user
 -------------------------------------------------------------------------------
 -- Helpers
 
