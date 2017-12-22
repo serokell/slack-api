@@ -14,6 +14,7 @@ module Web.Slack.WebAPI
     , getGroupsHistory
     , getGroupedUsers
     , getUsers
+    , getUser
     ) where
 
 import Control.Lens hiding ((??))
