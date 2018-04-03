@@ -75,7 +75,7 @@ data Profile = Profile
              , _profileRealName           :: Maybe Text
              , _profileRealNameNormalized :: Maybe Text
              , _profileTitle              :: Maybe Text
-             , _progileEmail              :: Maybe Text
+             , _profileEmail              :: Maybe Text
              , _profileSkype              :: Maybe Text
              , _profilePhone              :: Maybe Text
              , _profileImage24            :: URL
