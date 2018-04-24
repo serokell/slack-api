@@ -118,8 +118,8 @@ data AttachmentColor
 
 -- | Data Source for action. You can use Users or Channels to use usernames or channel names in buttons  
 --  or menu list. Static is used when all fields provided directly in posted message. 
--- External means that all options will be asked from your Option Load URL. 
-data DataSource = Static | Users | Channels | Conversations | External
+-- ExternalSource means that all options will be asked from your Option Load URL. 
+data DataSource = DSStatic | DSUsers | DSChannels | DSConversations | DSExternal
     deriving Show
 
 -- | Main type for the Action. It can have Button or Select type. 
@@ -127,19 +127,19 @@ data Action = ActionButton Button | ActionSelect Select
     deriving Show 
 
 -- | Data type for short messages (in buttons or in menu). 
--- newtype ShortText = ShortText { getText :: T.Text } 
---    deriving (Eq, Show,FromJSON)
+newtype ShortText = NewShortText { getText :: T.Text } 
+    deriving (Eq, Show,FromJSON)
  
 -- | Fuction to create short text. It takes only first 30 symbols.  
---makeShort :: T.Text -> ShortText
---makeShort = ShortText . T.take 30
+makeShort :: T.Text -> ShortText
+makeShort = NewShortText . T.take 30
 
 -- | Select is an action with menu with list of options, which can be choosed by user. 
 -- complete description of fields you can read in slack api docs : 
 -- https://api.slack.com/docs/interactive-message-field-guide
 data Select = Select  
     { _selectName             :: T.Text 
-    , _selectText             :: T.Text
+    , _selectText             :: ShortText
     , _selectValue            :: Maybe T.Text 
     , _selectConfirm          :: Maybe Confirm
     , _selectData_Source      :: Maybe DataSource
@@ -154,7 +154,7 @@ data Select = Select
 -- https://api.slack.com/docs/interactive-message-field-guide
 data Button = Button 
     { _buttonName             :: T.Text
-    , _buttonText             :: T.Text
+    , _buttonText             :: ShortText
     , _buttonValue            :: Maybe T.Text 
     , _buttonConfirm          :: Maybe Confirm
     , _buttonData_Source      :: Maybe DataSource
@@ -162,7 +162,6 @@ data Button = Button
     , _buttonStyle            :: Maybe ButtonStyle
     } 
     deriving Show 
-
 -- | Stythis decorates buttons with extra visual importance, 
 -- which is especially useful when providing logical default action or highlighting a destructive activity.
 -- Default — Yes, it's the default. Buttons will look simple.
@@ -172,37 +171,33 @@ data Button = Button
 --   like a piece of data stored on your servers. Use even more sparingly than primary.
 data ButtonStyle = Default | Primary | Danger
     deriving Show
-
 -- | Type of confirmation message. 
 -- Protect users from destructive actions or particularly distinguished decisions 
 -- by asking them to confirm their button click one more time. 
 -- Use confirmation dialogs with care.
 data Confirm = Confirm
     { _confirmTitle        :: Maybe T.Text 
-    , _confirmText         :: T.Text
+    , _confirmText         :: ShortText
     , _confirmOk_text      :: Maybe T.Text
     , _confirmDismiss_text :: Maybe T.Text 
     }
     deriving Show
-
 -- | Type of option field. Used in static and external message menu data types.
 -- The value is especially important when used in selected options.
 data OptField = OptField 
-    { _optFieldText        :: T.Text
+    { _optFieldText        :: ShortText
     , _optFieldValue       :: T.Text
-    , _optFieldDescription :: Maybe T.Text
+    , _optFieldDescription :: Maybe ShortText
     }
     deriving Show
-
 -- | Options group to place within message menu actions
 -- Options group are a set of 100 options divided into groups. 
 -- They can be used with static or external  data source types.
 data OptGroup = OptGroup 
-    { _groupText    :: T.Text
+    { _groupText    :: ShortText
     , _groupOptions :: [OptField]
     }
     deriving Show
-
 -- | data type for request for options from slack. 
 -- This structure will be sent to your Options Load URL in case of 
 -- using "External" data source for action. 
@@ -223,7 +218,6 @@ data OptionsLoad = OptionsLoad
     , _loadToken       :: T.Text 
     } 
     deriving Show
-
 -- | Data type for received message with user's choice. 
 -- It also containes full original message to slack from bot. 
 -- Full description can be optained here : 
@@ -322,7 +316,7 @@ defaultAttachment = Attachment
 defaultButton :: Button
 defaultButton = Button 
     { _buttonName             = ""
-    , _buttonText             = ""
+    , _buttonText             = makeShort ""
     , _buttonValue            = Nothing  
     , _buttonConfirm          = Nothing
     , _buttonData_Source      = Nothing 
@@ -334,7 +328,7 @@ defaultButton = Button
 defaultSelect :: Select
 defaultSelect = Select
     { _selectName             = ""
-    , _selectText             =  ""
+    , _selectText             = makeShort ""
     , _selectValue            = Nothing  
     , _selectConfirm          = Nothing
     , _selectData_Source      = Nothing 
@@ -347,21 +341,21 @@ defaultSelect = Select
 -- | Default value for Confirm type.  
 defaultConfirm = Confirm
     { _confirmTitle        = Nothing  
-    , _confirmText         =  "" 
+    , _confirmText         = makeShort "" 
     , _confirmOk_text      = Nothing 
     , _confirmDismiss_text = Nothing 
     } 
 
 -- | Default value for OptField type. 
 defaultOptField = OptField 
-    { _optFieldText        =  ""
+    { _optFieldText        = makeShort ""
     , _optFieldValue       = ""
     , _optFieldDescription = Nothing 
     }
 
 -- | Default value for OptGroup type. 
 defaultOptGroup = OptGroup 
-    { _groupText    =  "" 
+    { _groupText    = makeShort "" 
     , _groupOptions = []
     } 
 
@@ -408,6 +402,9 @@ instance FromJSON Action where
 instance FromJSON ReceivedAction where 
     parseJSON v = ReceivedS <$> parseJSON v <|> ReceivedB <$> parseJSON v
 
+instance ToJSON ShortText where 
+    toJSON = String . getText
+
 $(deriveToJSON defaultOptions {fieldLabelModifier = toSnake . drop 8} ''Confirm)
 $(deriveToJSON defaultOptions {fieldLabelModifier = toSnake . drop 9} ''OptField)
 $(deriveToJSON defaultOptions {fieldLabelModifier = toSnake . drop 6} ''OptGroup)
@@ -426,7 +423,7 @@ $(deriveFromJSON defaultOptions {fieldLabelModifier = toSnake . drop 8} ''Receiv
 $(deriveFromJSON defaultOptions {fieldLabelModifier = toSnake . drop 4} ''OriginalAttachment)
 
 instance ToJSON DataSource where
-    toJSON = String . T.toLower . T.pack . show  
+    toJSON = String . T.toLower . T.pack . (drop 2) . show  
 
 instance ToJSON ButtonStyle where
     toJSON = String . T.toLower . T.pack . show 
@@ -495,12 +492,12 @@ instance FromJSON TypeOfInteraction where
 
 instance FromJSON DataSource where 
     parseJSON (String s) = case s of 
-            "static"        -> return Static 
-            "users"         -> return Users 
-            "channels"      -> return Channels 
-            "conversations" -> return Conversations 
-            "external"      -> return External
-            _               -> return Static
+            "static"        -> return DSStatic 
+            "users"         -> return DSUsers 
+            "channels"      -> return DSChannels 
+            "conversations" -> return DSConversations 
+            "external"      -> return DSExternal
+            _               -> return DSStatic
 
 instance FromJSON ButtonStyle where 
     parseJSON (String s) = case s of 
