@@ -15,11 +15,13 @@ module Web.Slack.WebAPI
     , getGroupedUsers
     , getUsers
     , getUser
+    , getUserByMail
     ) where
 
 import Control.Lens hiding ((??))
 import Control.Monad.Except
 import Data.Aeson
+import Data.Semigroup 
 import Data.Aeson.Lens
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
@@ -148,6 +150,17 @@ getUsers conf = do
     resp <- makeSlackCall conf "users.list" id
     users <- resp ^? key "members" ?? "No members in response"
     fromJSON' users
+
+getUserByMail
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> T.Text 
+    -> m User 
+getUserByMail conf mail = do 
+    resp <- makeSlackCall conf "users.lookupByEmail" $
+        (W.param "email" .~ [mail])
+    user <- resp ^? key "user" ?? ("no users found by mail " <> mail)
+    fromJSON' user
 
 getUser
     :: (MonadError T.Text m, MonadIO m)
