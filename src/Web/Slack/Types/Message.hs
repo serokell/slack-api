@@ -1,10 +1,11 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE BangPatterns               #-}
 
 module Web.Slack.Types.Message where
 
@@ -14,13 +15,13 @@ import Data.Aeson.Types (FromJSON(..), Object, Parser, ToJSON(..), Value (..), K
      (.:?), (.:), (.=), object, withObject)
 import Control.Applicative (optional, (<|>))
 import Data.Maybe (fromMaybe)
-import qualified Data.Text as T (Text, take, pack, toLower)
 import Data.Time.Clock.POSIX (POSIXTime)
 import GHC.Generics (Generic)
 import Web.Slack.Types.Base (URL)
 import Web.Slack.Types.Id (BotId, UserId, CommentId, ChannelId,TeamId)
 import Web.Slack.Types.Time (SlackTimeStamp)
 import Web.Slack.Utils (toSnake)
+import qualified Data.Text as T (Text, take, pack, toLower)
 
 data MessagePayload = MessagePayload
     { messageId      :: Int
@@ -147,9 +148,9 @@ data Select = Select
     , _selectMin_query_length :: Maybe Int
     , _selectOptions          :: Maybe [OptField]
     , _selectOption_groups    :: Maybe [OptGroup]
-    } 
-    deriving Show
--- | Buttin is an action with buttotns, which can be clicked by user. 
+    } deriving Show
+
+-- | Button is an action with buttotns, which can be clicked by user. 
 -- complete description of fields you can read in slack api docs : 
 -- https://api.slack.com/docs/interactive-message-field-guide
 data Button = Button 
@@ -160,8 +161,8 @@ data Button = Button
     , _buttonData_Source      :: Maybe DataSource
     , _buttonMin_query_length :: Maybe Int
     , _buttonStyle            :: Maybe ButtonStyle
-    } 
-    deriving Show 
+    } deriving Show 
+
 -- | Stythis decorates buttons with extra visual importance, 
 -- which is especially useful when providing logical default action or highlighting a destructive activity.
 -- Default — Yes, it's the default. Buttons will look simple.
@@ -171,6 +172,7 @@ data Button = Button
 --   like a piece of data stored on your servers. Use even more sparingly than primary.
 data ButtonStyle = Default | Primary | Danger
     deriving Show
+
 -- | Type of confirmation message. 
 -- Protect users from destructive actions or particularly distinguished decisions 
 -- by asking them to confirm their button click one more time. 
@@ -180,24 +182,24 @@ data Confirm = Confirm
     , _confirmText         :: ShortText
     , _confirmOk_text      :: Maybe T.Text
     , _confirmDismiss_text :: Maybe T.Text 
-    }
-    deriving Show
+    } deriving Show
+
 -- | Type of option field. Used in static and external message menu data types.
 -- The value is especially important when used in selected options.
 data OptField = OptField 
     { _optFieldText        :: ShortText
     , _optFieldValue       :: T.Text
     , _optFieldDescription :: Maybe ShortText
-    }
-    deriving Show
+    } deriving Show
+    
 -- | Options group to place within message menu actions
 -- Options group are a set of 100 options divided into groups. 
 -- They can be used with static or external  data source types.
 data OptGroup = OptGroup 
     { _groupText    :: ShortText
     , _groupOptions :: [OptField]
-    }
-    deriving Show
+    } deriving Show
+
 -- | data type for request for options from slack. 
 -- This structure will be sent to your Options Load URL in case of 
 -- using "External" data source for action. 
@@ -216,29 +218,28 @@ data OptionsLoad = OptionsLoad
     , _loadMessageTs   :: POSIXTime
     , _loadAttachId    :: Int 
     , _loadToken       :: T.Text 
-    } 
-    deriving Show
+    } deriving Show
+
 -- | Data type for received message with user's choice. 
 -- It also containes full original message to slack from bot. 
 -- Full description can be optained here : 
 -- https://api.slack.com/docs/interactive-message-field-guide#action_payload
 data ReceivedInfo = ReceivedInfo 
-    { _receivedType        :: TypeOfInteraction
-    , _receivedActions     :: [ReceivedAction]
-    , _receivedId          :: Maybe T.Text
-    , _receivedTeamId      :: TeamId
-    , _receivedTeamDomain  :: T.Text
-    , _receivedChannelId   :: ChannelId
-    , _receivedChannelName :: T.Text
-    , _receivedUserId      :: UserId
-    , _receivedUserName    :: T.Text
-    , _receivedActionTs    :: POSIXTime
-    , _receivedMessageTs   :: POSIXTime
-    , _receivedToken       :: T.Text 
-    , _receivedOriginal    :: OriginalMessage
-    , _receivedURL         :: T.Text 
-    }
-    deriving Show
+    { _receivedType        :: !TypeOfInteraction
+    , _receivedActions     :: ![ReceivedAction]
+    , _receivedId          :: !(Maybe T.Text)
+    , _receivedTeamId      :: !TeamId
+    , _receivedTeamDomain  :: !T.Text
+    , _receivedChannelId   :: !ChannelId
+    , _receivedChannelName :: !T.Text
+    , _receivedUserId      :: !UserId
+    , _receivedUserName    :: !T.Text
+    , _receivedActionTs    :: !POSIXTime
+    , _receivedMessageTs   :: !POSIXTime
+    , _receivedToken       :: !T.Text 
+    , _receivedOriginal    :: !OriginalMessage
+    , _receivedURL         :: !T.Text 
+    } deriving Show
 
 
 -- | Data type for information about user action (button click or choose from select list). 
@@ -247,41 +248,37 @@ data ReceivedAction = ReceivedS ReceivedSelect | ReceivedB ReceivedButton
 
 -- | Received data about select action. 
 data ReceivedSelect = ReceivedSelect 
-    { _rSelectName             :: T.Text 
-    , _rSelectType             :: T.Text
-    , _rSelectedOptions        :: [T.Text]
-    } 
-    deriving Show
+    { _rSelectName             :: !T.Text 
+    , _rSelectType             :: !T.Text
+    , _rSelectedOptions        :: ![T.Text]
+    } deriving Show
 
 -- | Received data about button click. 
 data ReceivedButton = ReceivedButton
-    { _rButtonName             :: T.Text 
-    , _rButtonType             :: T.Text
-    , _rButtonValue            :: T.Text
-    }
-    deriving Show
+    { _rButtonName             :: !T.Text 
+    , _rButtonType             :: !T.Text
+    , _rButtonValue            :: !T.Text
+    } deriving Show
 
 -- | Information about original message.
 -- It includes info about attachments and actions.  
 data OriginalMessage = OriginalMessage 
-    { _orgText        :: T.Text
-    , _orgBotId       :: BotId
-    , _orgAttachments :: [OriginalAttachment]
-    , _orgType        ::  T.Text
-    , _orgSubtype     :: Maybe T.Text
-    , _orgTs          :: POSIXTime 
-    }
-    deriving Show
+    { _orgText        :: !T.Text
+    , _orgBotId       :: !BotId
+    , _orgAttachments :: ![OriginalAttachment]
+    , _orgType        :: !T.Text
+    , _orgSubtype     :: !(Maybe T.Text)
+    , _orgTs          :: !POSIXTime 
+    } deriving Show
 
 -- | Attributes of attachment in the original message. 
 data OriginalAttachment = OriginalAttachment
-    { _orgCallback_id :: T.Text
-    , _orgFallback    :: T.Text
-    , _orgId          :: Int
-    , _orgColor       :: Maybe AttachmentColor
-    , _orgActions     :: Maybe [Action]  
-    }
-    deriving Show
+    { _orgCallback_id :: !T.Text
+    , _orgFallback    :: !T.Text
+    , _orgId          :: !Int
+    , _orgColor       :: !(Maybe AttachmentColor)
+    , _orgActions     :: !(Maybe [Action])  
+    } deriving Show
 
 -- | Type of interaction. 
 -- Value of this type is inculded in responce from slack. 
