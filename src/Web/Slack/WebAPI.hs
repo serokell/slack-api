@@ -16,6 +16,7 @@ module Web.Slack.WebAPI
     , getUsers
     , getUser
     , getUserByMail
+    , searchMessage
     ) where
 
 import Control.Lens hiding ((??))
@@ -172,6 +173,23 @@ getUser conf (Id uid) = do
         (W.param "user" .~ [uid])
     user <- resp ^? key "user" ?? "No user in response"
     fromJSON' user
+
+-- | This function searches messages from given user in given channel with given text
+-- It returns list of texts and timestamps (Int)
+searchMessage 
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> T.Text
+    -> T.Text 
+    -> T.Text
+    -> m [(T.Text, Integer)]
+searchMessage conf channelName searchString userName = do 
+    resp   <- makeSlackCall conf "search.messages" $ 
+            (W.param "query" .~ ["in:" <> channelName <>" from:" <> userName <>" " <> searchString])
+    msgs   <- resp ^? key "messages" ?? "Fail to found messages key" 
+    texts  <- return $ msgs ^.. values.key "text"._String
+    times  <- return $ (read . takeWhile (/= '.') . T.unpack) <$> msgs ^.. values.key "text"._String
+    return $ zip texts times
 -------------------------------------------------------------------------------
 -- Helpers
 
