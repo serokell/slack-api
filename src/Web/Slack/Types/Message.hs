@@ -6,19 +6,20 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE LambdaCase                 #-}
 
 module Web.Slack.Types.Message where
 
 import Control.Lens (makeLenses,(^.))
 import Data.Aeson.TH (deriveToJSON, deriveFromJSON, defaultOptions,fieldLabelModifier)
 import Data.Aeson.Types (FromJSON(..), Object, Parser, ToJSON(..), Value (..), KeyValue,
-     (.:?), (.:), (.=), object, withObject)
+     (.:?), (.:), (.=), object, withObject, withText)
 import Control.Applicative (optional, (<|>))
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock.POSIX (POSIXTime)
 import GHC.Generics (Generic)
 import Web.Slack.Types.Base (URL)
-import Web.Slack.Types.Id (BotId, UserId, CommentId, ChannelId,TeamId)
+import Web.Slack.Types.Id (BotId, UserId, ChannelId,TeamId)
 import Web.Slack.Types.Time (SlackTimeStamp)
 import Web.Slack.Utils (toSnake)
 import qualified Data.Text as T (Text, take, pack, toLower)
@@ -335,7 +336,8 @@ defaultSelect = Select
     , _selectOption_groups    = Nothing
     }
 
--- | Default value for Confirm type.  
+-- | Default value for Confirm type. 
+defaultConfirm :: Confirm 
 defaultConfirm = Confirm
     { _confirmTitle        = Nothing  
     , _confirmText         = makeShort "" 
@@ -344,6 +346,7 @@ defaultConfirm = Confirm
     } 
 
 -- | Default value for OptField type. 
+defaultOptField :: OptField
 defaultOptField = OptField 
     { _optFieldText        = makeShort ""
     , _optFieldValue       = ""
@@ -351,6 +354,7 @@ defaultOptField = OptField
     }
 
 -- | Default value for OptGroup type. 
+defaultOptGroup :: OptGroup
 defaultOptGroup = OptGroup 
     { _groupText    = makeShort "" 
     , _groupOptions = []
@@ -482,13 +486,13 @@ instance FromJSON ReceivedInfo where
         return ReceivedInfo{..}
 
 instance FromJSON TypeOfInteraction where 
-    parseJSON (String s) = case s of 
+    parseJSON = withText "TypeOfInteraction" $ \case 
             "interactive_message" -> return InteractiveMessage
             "dialog_submission"   -> return DialogSubmission
             _                     -> return InteractiveMessage
 
 instance FromJSON DataSource where 
-    parseJSON (String s) = case s of 
+    parseJSON = withText "DataSource" $ \case 
             "static"        -> return DSStatic 
             "users"         -> return DSUsers 
             "channels"      -> return DSChannels 
@@ -497,7 +501,7 @@ instance FromJSON DataSource where
             _               -> return DSStatic
 
 instance FromJSON ButtonStyle where 
-    parseJSON (String s) = case s of 
+    parseJSON = withText "ButtonStyle" $ \case  
         "default" -> return Default 
         "primary" -> return Primary
         "danger"  -> return Danger
@@ -514,7 +518,7 @@ instance FromJSON ReceivedSelect where
 
 
 instance FromJSON AttachmentColor where 
-    parseJSON (String s) = case s of 
+    parseJSON = withText "AttachmentColor" $ \case 
         "default" -> return DefaultColor       
         "good"    -> return GoodColor
         "warning" -> return WarningColor
@@ -549,7 +553,7 @@ instance FromJSON OptionsLoad where
         _loadUserName     <- user .: "name"
         _loadActionTs     <- readPOSIXTime <$> o .: "action_ts"
         _loadMessageTs    <- readPOSIXTime <$> o .: "message_ts"
-        _loadAttachmentId <- read @Int <$> o .: "attachment_id"
+        _loadAttachId     <- read @Int <$> o .: "attachment_id"
         _loadToken        <- o .: "token"
         return OptionsLoad{..}
 
