@@ -182,13 +182,14 @@ searchMessage
     -> T.Text
     -> T.Text 
     -> T.Text
-    -> m [(T.Text, Integer)]
+    -> m [(T.Text,Integer)]
 searchMessage conf channelName searchString userName = do 
-    resp   <- makeSlackCall conf "search.messages" $ 
-            (W.param "query" .~ ["in:" <> channelName <>" from:" <> userName <>" " <> searchString])
-    msgs   <- resp ^? key "messages" ?? "Fail to found messages key" 
-    texts  <- return $ msgs ^.. values.key "text"._String
-    times  <- return $ (read . takeWhile (/= '.') . T.unpack) <$> msgs ^.. values.key "text"._String
+    resp      <- makeSlackCall conf "search.messages" $ 
+               (W.param "query" .~ ["in:" <> channelName <>" from:" <> userName <>" " <> searchString])
+    allinfo   <- resp ^? key "messages" ?? "Fail to found messages key"
+    msgs      <- allinfo ^? key "matches" ?? "Fail to found matches key"
+    texts     <- return $ msgs ^.. values.key "text"._String
+    times     <- return $ (read . takeWhile (/= '.') . T.unpack) <$> msgs ^.. values.key "ts"._String
     return $ zip texts times
 -------------------------------------------------------------------------------
 -- Helpers
