@@ -51,6 +51,7 @@ module Web.Slack
       -- * Sending messages to slack
     , sendMessage
     , sendRichMessage
+    , sendRichMessageThread
     , sendPing
     , addReaction
 
@@ -185,6 +186,20 @@ sendRichMessage
     :: SlackHandle -> ChannelId -> T.Text -> [Attachment] -> IO (Either T.Text ())
 sendRichMessage h cid msg as =
     runExceptT $ chat_postMessage (getConfig h) cid msg as
+
+
+-- | Post a complex message to thread using the web API. There's a lot more
+-- functionality than is exposed here - see
+-- <https://api.slack.com/methods/chat.postMessage>.
+--
+-- Note that, since this function uses the slack web API (not the RTD api)
+-- under the hood, it behaves a bit differently to @sendMessage@. In
+-- particular: rich messages sent by your bot will appear as events. You
+-- will probably want to explicitly ignore these.
+sendRichMessageThread 
+    :: SlackHandle -> ChannelId -> T.Text -> [Attachment] -> SlackTimeStamp -> Bool -> IO (Either T.Text ())
+sendRichMessageThread  h cid msg as ts reply_broadcast = 
+    runExceptT $ chat_postMessageThread (getConfig h) cid msg as ts reply_broadcast
 
 -- | Add a reaction to a message in the specified channel.
 --

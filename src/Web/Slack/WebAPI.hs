@@ -9,6 +9,7 @@ module Web.Slack.WebAPI
       -- * Methods
     , rtm_start
     , chat_postMessage
+    , chat_postMessageThread
     , reactions_add_message
     , getChannelHistory
     , getGroupsHistory
@@ -84,6 +85,24 @@ chat_postMessage conf (Id cid) msg as =
         (W.param "text"        .~ [msg]) .
         (W.param "attachments" .~ [encode' as]) .
         (W.param "as_user"     .~ ["true"])
+
+chat_postMessageThread 
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> ChannelId
+    -> T.Text
+    -> [Attachment]
+    -> SlackTimeStamp
+    -> Bool
+    -> m ()
+chat_postMessageThread conf (Id cid) msg as thread_ts replyBroadcast =
+    void $ makeSlackCall conf "chat.postMessage" $
+        (W.param "channel"     .~ [cid]) .
+        (W.param "text"        .~ [msg]) .
+        (W.param "attachments" .~ [encode' as]) .
+        (W.param "as_user"     .~ ["true"]) .
+        (W.param "thread_ts"   .~ [(T.pack . show $ (thread_ts ^. (slackTime . getTime))) <> "." <> (T.pack . show $ (thread_ts ^. timestampUid))]) .
+        (W.param "reply_broadcast" .~ [T.toLower $ T.pack $ show $ replyBroadcast])
 
 reactions_add_message
     :: (MonadError T.Text m, MonadIO m)
