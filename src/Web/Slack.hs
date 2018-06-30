@@ -130,7 +130,14 @@ getSession = _shSession
 --
 -- > eventProducer :: MonadIO m => SlackHandle -> Producer Event m ()
 -- > eventProducer h = forever $ liftIO (getNextEvent h) >>= yield
-getNextEvent :: SlackHandle -> IO Event
+
+getNextEvent h@SlackHandle{..} = do
+    raw <- WS.receiveData _shConnection
+    case eitherDecode raw of
+        Left e -> getNextEvent h
+        Right event -> return event
+
+{- getNextEvent :: SlackHandle -> IO Event
 getNextEvent h@SlackHandle{..} = do
     raw <- WS.receiveData _shConnection
     case eitherDecode raw of
@@ -138,18 +145,18 @@ getNextEvent h@SlackHandle{..} = do
             putStrLn $ unlines
                 [ show raw
                 , e
-                , "Please report this failure to the github issue tracker"
+                , "Failed to decode."
                 ]
             getNextEvent h
         Right event@(UnknownEvent val) -> do
             putStrLn $ unlines
                 [ show val
                 , "Failed to parse to a known event"
-                , "Please report this failure to the github issue tracker"
+                , "It is ok. Cureently we suports not all possible events."
                 ]
             return event
         Right event ->
-            return event
+            return event -}
 
 nextMessageId :: SlackHandle -> IO Int
 nextMessageId SlackHandle{_shCounter} =
