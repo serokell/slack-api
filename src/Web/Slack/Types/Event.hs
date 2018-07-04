@@ -223,12 +223,16 @@ getChannelId event =
     <|> event ^? _ThreadedMessage . _1
     <|> event ^? _HiddenMessage . _1
     <|> event ^? _ChannelMarked . _1
+    <|> event ^? _ChannelCreated . channelId
+    <|> event ^? _ChannelJoined . channelId
     <|> event ^? _ChannelLeft
     <|> event ^? _ChannelDeleted
     <|> event ^? _ChannelArchive . _1
     <|> event ^? _ChannelUnarchive . _1
     <|> event ^? _GroupOpen . _2
     <|> event ^? _GroupClose . _2
+    <|> event ^? _GroupJoined . channelId
+    <|> event ^? _GroupLeft . channelId
     <|> event ^? _GroupArchive
     <|> event ^? _GroupUnarchive
     <|> event ^? _GroupMarked . _1
