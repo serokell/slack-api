@@ -217,8 +217,9 @@ instance FromJSON ChannelRenameInfo where
 
 makePrisms ''Event
 
-getChannelId :: Event -> Maybe ChannelId
-getChannelId event =
+-- | Get ChannelId for any event from channel
+eventChannelId :: Event -> Maybe ChannelId
+eventChannelId event =
         event ^? _Message . _1
     <|> event ^? _ThreadedMessage . _1
     <|> event ^? _HiddenMessage . _1
@@ -227,6 +228,7 @@ getChannelId event =
     <|> event ^? _ChannelJoined . channelId
     <|> event ^? _ChannelLeft
     <|> event ^? _ChannelDeleted
+    <|> event ^? _ChannelRename . channelRenameId
     <|> event ^? _ChannelArchive . _1
     <|> event ^? _ChannelUnarchive . _1
     <|> event ^? _GroupOpen . _2
@@ -235,7 +237,37 @@ getChannelId event =
     <|> event ^? _GroupLeft . channelId
     <|> event ^? _GroupArchive
     <|> event ^? _GroupUnarchive
+    <|> event ^? _GroupRename . channelRenameId
     <|> event ^? _GroupMarked . _1
     <|> event ^? _UserTyping . _1
     <|> event ^? _MemberJoinedChannel . _2
     <|> event ^? _MemberLeftChannel . _2
+
+submitterUserId :: Submitter -> Maybe UserId
+submitterUserId (UserComment uid) = Just uid
+submitterUserId _ = Nothing
+
+-- | Get UserId for any event from user
+eventUserId :: Event -> Maybe UserId
+eventUserId event =
+        (event ^? _Message . _2 >>= submitterUserId)
+    <|> (event ^? _ThreadedMessage . _2 >>= submitterUserId)
+    <|> (event ^? _HiddenMessage . _2 >>= submitterUserId)
+    <|> event ^? _ChannelArchive . _2
+    <|> event ^? _ChannelUnarchive . _2
+    <|> event ^? _ImCreated . _1
+    <|> event ^? _ImOpen . _1
+    <|> event ^? _ImClose . _1
+    <|> event ^? _GroupOpen . _1
+    <|> event ^? _GroupClose . _1
+    <|> event ^? _PresenceChange . _1
+    <|> event ^? _UserChange . userId
+    <|> event ^? _TeamJoin . userId
+    <|> event ^? _ReactionAdded . _1
+    <|> event ^? _ReactionRemoved . _1
+    <|> event ^? _StarAdded . _1
+    <|> event ^? _StarRemoved . _1
+    <|> event ^? _UserTyping. _2
+    <|> event ^? _StatusChange . _1
+    <|> event ^? _MemberJoinedChannel . _1
+    <|> event ^? _MemberLeftChannel . _1
