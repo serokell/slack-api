@@ -212,7 +212,8 @@ searchMessage conf channelName searchString userName = do
     times     <- return $ (read . takeWhile (/= '.') . T.unpack) <$> msgs ^.. values.key "ts"._String
     return $ zip texts times
 
---| Open new Direct Message channel to send PM to user. 
+
+-- | Open new Direct Message channel to send PM to user. 
 -- It creates new and returns channel id or just returns id of already existing channel. 
 openDMChannel  
     :: (MonadError T.Text m, MonadIO m)
