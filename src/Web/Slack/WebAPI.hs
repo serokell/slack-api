@@ -18,6 +18,7 @@ module Web.Slack.WebAPI
     , getUser
     , getUserByMail
     , searchMessage
+    , openDMChannel
     ) where
 
 import Control.Lens hiding ((??))
@@ -210,6 +211,23 @@ searchMessage conf channelName searchString userName = do
     texts     <- return $ msgs ^.. values.key "text"._String
     times     <- return $ (read . takeWhile (/= '.') . T.unpack) <$> msgs ^.. values.key "ts"._String
     return $ zip texts times
+
+--| Open new Direct Message channel to send PM to user. 
+-- It creates new and returns channel id or just returns id of already existing channel. 
+openDMChannel  
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig 
+    -> UserId 
+    -> m ChannelId
+openDMChannel conf uid = do 
+    resp         <- makeSlackCall conf "im.open" $ 
+                   (W.param "user" .~ [uid ^. getId])
+    isOk       <- join $ fromJSON' <$> ((resp ^? key "ok") ?? "Invalid JSON Answer. Failed to find \"ok\" key.")
+    if isOk 
+    then return $ Id $ resp ^. (key "channel" . key "id"._String)
+    else throwError $ T.pack $ show isOk
+
+
 -------------------------------------------------------------------------------
 -- Helpers
 

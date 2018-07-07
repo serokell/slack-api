@@ -47,6 +47,7 @@ module Web.Slack
     , getNextEvent
     , getSession
     , getConfig
+    , newDMChannel
 
       -- * Sending messages to slack
     , sendMessage
@@ -194,6 +195,11 @@ sendRichMessage
 sendRichMessage h cid msg as =
     runExceptT $ chat_postMessage (getConfig h) cid msg as
 
+
+-- | Creates new DM channel. 
+newDMChannel :: SlackHandle -> UserId -> IO (Either T.Text ChannelId)
+newDMChannel h uid = 
+    runExceptT $ openDMChannel (getConfig h) uid 
 
 -- | Post a complex message to thread using the web API. There's a lot more
 -- functionality than is exposed here - see
