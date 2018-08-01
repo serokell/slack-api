@@ -144,7 +144,7 @@ parseType o@(Object v) typ =
         void $ (v .: "channel" :: Parser ChannelId)
         hidden <- (\case {Just True -> True; _ -> False}) <$> v .:? "hidden"
         if not hidden
-          then Message <$>  v .: "channel" <*> pure submitter  <*> v .: "text" <*> v .: "ts" <*> pure subt <*> v .:? "edited"
+          then Message <$>  v .: "channel" <*> pure submitter  <*> v .: "content" <*> v .: "ts" <*> pure subt <*> v .:? "edited"
           else HiddenMessage <$>  v .: "channel" <*> pure submitter  <*> v .: "ts" <*> pure subt
       "user_typing" -> UserTyping <$> v .: "channel" <*> v .: "user"
       "presence_change" -> PresenceChange <$> v .: "user" <*> v .: "presence"
