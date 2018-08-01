@@ -134,6 +134,18 @@ parseType o@(Object v) typ =
         if not hidden
           then Message <$>  v .: "channel" <*> pure submitter  <*> v .: "text" <*> v .: "ts" <*> pure subt <*> v .:? "edited"
           else HiddenMessage <$>  v .: "channel" <*> pure submitter  <*> v .: "ts" <*> pure subt
+      "desktop_notification" -> do
+        subt <- (\case
+                  Nothing -> return Nothing
+                  Just r  -> Just <$> subtype r o) =<< v .:? "subtype"
+        submitter <- case subt of
+                      Just (SBotMessage bid _ _) -> return $ BotComment bid
+                      _                      -> maybe System UserComment <$> v .:? "user"
+        void $ (v .: "channel" :: Parser ChannelId)
+        hidden <- (\case {Just True -> True; _ -> False}) <$> v .:? "hidden"
+        if not hidden
+          then Message <$>  v .: "channel" <*> pure submitter  <*> v .: "text" <*> v .: "ts" <*> pure subt <*> v .:? "edited"
+          else HiddenMessage <$>  v .: "channel" <*> pure submitter  <*> v .: "ts" <*> pure subt
       "user_typing" -> UserTyping <$> v .: "channel" <*> v .: "user"
       "presence_change" -> PresenceChange <$> v .: "user" <*> v .: "presence"
       "channel_marked"  -> ChannelMarked <$> v .: "channel" <*> v .: "ts"
