@@ -1,6 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Web.Slack.WebAPI
     ( SlackConfig(..)
@@ -10,17 +10,27 @@ module Web.Slack.WebAPI
     , rtm_start
     , chat_postMessage
     , reactions_add_message
+    , getChannelHistory
+    , getGroupsHistory
+    , getGroupedUsers
+    , getUsers
+    , getUser
+    , getUserByMail
+    , searchMessage
     ) where
 
 import Control.Lens hiding ((??))
 import Control.Monad.Except
 import Data.Aeson
+import Data.Semigroup 
 import Data.Aeson.Lens
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Network.Wreq as W
 import Web.Slack.Types
+
+import Data.Time.Clock.POSIX
 
 -- | Configuration options needed to connect to the Slack API
 data SlackConfig = SlackConfig
@@ -88,15 +98,112 @@ reactions_add_message conf (Id cid) emoji timestamp = do
         (W.param "channel"   .~ [cid]) .
         (W.param "timestamp" .~ [encode' timestamp])
 
+getChannelHistory
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> ChannelId
+    -> Maybe POSIXTime
+    -> m [ChatMessage]
+getChannelHistory = getHistory "channels.history"
+
+getGroupsHistory
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> ChannelId
+    -> Maybe POSIXTime
+    -> m [ChatMessage]
+getGroupsHistory = getHistory "groups.history"
+
+getHistory
+    :: (MonadError T.Text m, MonadIO m)
+    => String
+    -> SlackConfig
+    -> ChannelId
+    -> Maybe POSIXTime -- time of oldest message
+    -> m [ChatMessage]
+getHistory method conf (Id cid) time = do
+    -- accidently 0 is not working as default argument
+    let t = fromMaybe 1 time
+    resp <- makeSlackCall conf method $
+        (W.param "channel" .~ [cid]) .
+        (W.param "oldest" .~ [T.pack $ show t]) .
+        -- 1000 is max count of history
+        (W.param "count" .~ [T.pack "1000"])
+    msgs <- resp ^? key "messages" ?? "No messages in response"
+    fromJSON' msgs
+
+getGroupedUsers
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> GroupId
+    -> m [UserId]
+getGroupedUsers conf (Id gid) = do
+    resp <- makeSlackCall conf "usergroups.users.list" $
+        (W.param "usergroup" .~ [gid])
+    users <- resp ^? key "users" ?? "No users in response"
+    fromJSON' users
+
+getUsers
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> m [User]
+getUsers conf = do
+    resp <- makeSlackCall conf "users.list" id
+    users <- resp ^? key "members" ?? "No members in response"
+    fromJSON' users
+
+getUserByMail
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> T.Text 
+    -> m User 
+getUserByMail conf mail = do 
+    resp <- makeSlackCall conf "users.lookupByEmail" $
+        (W.param "email" .~ [mail])
+    user <- resp ^? key "user" ?? ("no users found by mail " <> mail)
+    fromJSON' user
+
+getUser
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> UserId -- SlackId
+    -> m User
+getUser conf (Id uid) = do
+    resp <- makeSlackCall conf "users.info" $
+        (W.param "user" .~ [uid])
+    user <- resp ^? key "user" ?? "No user in response"
+    fromJSON' user
+
+-- | This function searches messages from given user in given channel with given text
+-- It returns list of texts and timestamps (Int)
+searchMessage 
+    :: (MonadError T.Text m, MonadIO m)
+    => SlackConfig
+    -> T.Text
+    -> T.Text 
+    -> T.Text
+    -> m [(T.Text,Integer)]
+searchMessage conf channelName searchString userName = do 
+    resp      <- makeSlackCall conf "search.messages" $ 
+               (W.param "query" .~ ["in:" <> channelName <>" from:" <> userName <>" " <> searchString])
+    allinfo   <- resp ^? key "messages" ?? "Fail to found messages key"
+    msgs      <- allinfo ^? key "matches" ?? "Fail to found matches key"
+    texts     <- return $ msgs ^.. values.key "text"._String
+    times     <- return $ (read . takeWhile (/= '.') . T.unpack) <$> msgs ^.. values.key "ts"._String
+    return $ zip texts times
 -------------------------------------------------------------------------------
 -- Helpers
+
+fromMaybe :: a -> Maybe a -> a
+fromMaybe a Nothing  = a
+fromMaybe _ (Just a) = a
 
 encode' :: ToJSON a => a -> T.Text
 encode' = T.decodeUtf8 . BL.toStrict . encode
 
 fromJSON' :: (FromJSON a, MonadError T.Text m) => Value -> m a
 fromJSON' x = case fromJSON x of
-    Error e -> throwError (T.pack e)
+    Error e   -> throwError (T.pack e)
     Success r -> return r
 
 -- | Like '(??)' from Control.Error, but a bit more general and with the
@@ -104,4 +211,3 @@ fromJSON' x = case fromJSON x of
 infixl 7 ??
 (??) :: MonadError e m => Maybe a -> e -> m a
 x ?? e = maybe (throwError e) return x
-

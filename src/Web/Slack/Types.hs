@@ -35,7 +35,7 @@ import Web.Slack.Types.File
 import Web.Slack.Types.IM
 import Web.Slack.Types.Id
 import Web.Slack.Types.Item
-import Web.Slack.Types.Message
+import Web.Slack.Types.Message hiding (NewShortText)
 import Web.Slack.Types.Preferences
 import Web.Slack.Types.Presence
 import Web.Slack.Types.Self
