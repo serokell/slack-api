@@ -6,6 +6,7 @@ stdenv.mkDerivation rec {
   buildInputs = [
     haskell.compiler.ghc843
     cabal-install
+    zlib
   ];
 
   shellHook = ''
