@@ -1,5 +1,3 @@
-![Travis Build Status](https://travis-ci.org/mpickering/slack-api.svg?branch=master)
-
 Bindings to the Slack RTM API.
 
 These bindings were developed whilst I was interning at [Borders](http://www.borde.rs/).
