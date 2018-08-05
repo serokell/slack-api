@@ -1,3 +1,0 @@
-build:
-  stage: build
-  script: nix-shell --run 'cabal new-update && cabal new-build'
