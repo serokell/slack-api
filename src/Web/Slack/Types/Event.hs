@@ -98,6 +98,8 @@ data Event where
   PinAdded :: Event
   PinRemoved :: Event
   NoEvent :: Event
+  -- 
+  DesktopNotification :: ChannelId -> Submitter -> Text -> SlackTimeStamp -> Event
   -- Parsing failing of an event
   UnknownEvent :: Value -> Event
   deriving (Show)
@@ -134,6 +136,14 @@ parseType o@(Object v) typ =
         if not hidden
           then Message <$>  v .: "channel" <*> pure submitter  <*> v .: "text" <*> v .: "ts" <*> pure subt <*> v .:? "edited"
           else HiddenMessage <$>  v .: "channel" <*> pure submitter  <*> v .: "ts" <*> pure subt
+      "desktop_notification" -> do
+        subt <- (\case
+                  Nothing -> return Nothing
+                  Just r  -> Just <$> subtype r o) =<< v .:? "subtype"
+        submitter <- case subt of
+          Just (SBotMessage bid _ _) -> return $ BotComment bid
+          _                          -> maybe System UserComment <$> v .:? "user"
+        DesktopNotification <$> v .: "channel" <*> pure submitter <*> v .: "content" <*> v .: "ts" 
       "user_typing" -> UserTyping <$> v .: "channel" <*> v .: "user"
       "presence_change" -> PresenceChange <$> v .: "user" <*> v .: "presence"
       "channel_marked"  -> ChannelMarked <$> v .: "channel" <*> v .: "ts"
